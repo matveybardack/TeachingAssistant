@@ -33,7 +33,7 @@ As a teacher, I want to trigger the generation of a set of exam tickets from a l
 
 **Acceptance Scenarios**:
 
-1.  **Given** a valid `tasks.txt` file and user-provided parameters (target complexity, tolerance), **When** the generation process is run, **Then** a `tickets.txt` file is created and populated, and the console reports the number of tickets created.
+1.  **Given** a valid `tasks.txt` file and user-provided parameters (target complexity, tolerance), **When** the generation process is run, **Then** a `tickets.txt` file is created and populated with a randomized but valid set of tickets, and the console reports the number of tickets created. Re-running the generation should produce a different set of tickets.
 2.  **Given** an input file where it's impossible to meet the generation criteria, **When** the generation is run, **Then** the process stops, and the console displays a clear message explaining why.
 
 ## Clarifications
@@ -56,6 +56,7 @@ As a teacher, I want to trigger the generation of a set of exam tickets from a l
 -   **FR-005**: System MUST save the generated tickets to an output file (`tickets.txt`), overwriting any previous version of the file.
 -   **FR-006**: The output format for a ticket in the file MUST be a single line: `Билет N; (ID) Тема; Тип; Сложность; Текст; (ID) ...`.
 -   **FR-007**: System MUST stop generation if it's impossible to create a new ticket that satisfies all rules and inform the user of the reason.
+-   **FR-008**: The ticket creation process MUST incorporate randomness to ensure that subsequent runs with the same input produce different (but still valid) sets of tickets.
 
 ### Generation Rules (Strict Priority Order)
 
@@ -76,6 +77,6 @@ As a teacher, I want to trigger the generation of a set of exam tickets from a l
 
 ### Measurable Outcomes
 
--   **SC-001**: The application generates the maximum possible number of tickets that satisfy all generation rules (A-D) from a given input file.
+-   **SC-001**: The application generates the maximum possible number of tickets that satisfy all generation rules from a given input file.
 -   **SC-002**: Every ticket in the output `tickets.txt` file successfully passes validation against all specified generation rules (GR-A.1 to GR-D.1).
 -   **SC-003**: When generation stops because a rule cannot be met, the application provides a clear, correct message to the user identifying the blocking rule.
