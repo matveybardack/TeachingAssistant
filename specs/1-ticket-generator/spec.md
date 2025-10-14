@@ -38,6 +38,9 @@ As a teacher, I want to trigger the generation of a set of exam tickets from a l
 
 ## Clarifications
 
+### Session 2025-10-14
+- Q: How should the "optimal" task type ratio be determined? → A: The algorithm should choose the ratio that **maximizes the total number of generated tickets** from the available task pool.
+
 ### Session 2025-10-12
 - Q: How is ticket complexity defined? → A: It is the **total sum** of the complexities of its constituent tasks.
 - Q: How is the target complexity determined? → A: The user manually enters the target **total complexity** for a single ticket.
@@ -62,15 +65,17 @@ As a teacher, I want to trigger the generation of a set of exam tickets from a l
 
 -   **GR-A.1 (Ticket Total Complexity - HIGHEST PRIORITY)**: The **total sum** of the complexities of all tasks in a single ticket MUST be within a user-defined percentage tolerance of the target total complexity.
     - *Example*: If target is `10` and tolerance is `20%`, the sum must be between `8` and `12` (inclusive).
-    - This is the primary and most important condition for forming a ticket. Generation stops if no new combination of tasks can satisfy this rule.
+    - This is the primary and most important condition for forming a ticket.
 
--   **GR-B.1 (Task Uniqueness in Ticket)**: All tasks within a single ticket MUST be unique.
+-   **GR-B.1 (Type Diversity in Ticket - HIGH PRIORITY)**: A ticket MUST NOT consist entirely of tasks from a single type.
 
--   **GR-C.1 (Ticket Uniqueness)**: No two generated tickets can be identical (i.e., contain the exact same set of task IDs). The order of tasks does not matter.
+-   **GR-C.1 (Theme Diversity in Ticket - MEDIUM PRIORITY)**: A ticket MUST NOT consist entirely of tasks from a single theme.
 
--   **GR-D.1 (Randomness)**: The process of selecting tasks to form a ticket must be randomized. This ensures that running the generation process multiple times with the same input and parameters will produce a different, but equally valid, set of tickets each time.
+-   **GR-D.1 (Task Uniqueness in Ticket)**: All tasks within a single ticket MUST be unique.
 
--   **NOTE on Task Types/Themes**: There are **no strict rules** regarding the distribution of task types or themes within a ticket. The algorithm's primary goal is to satisfy the complexity rule (GR-A.1).
+-   **GR-E.1 (Ticket Uniqueness)**: No two generated tickets can be identical (i.e., contain the exact same set of task IDs). The order of tasks does not matter.
+
+-   **GR-F.1 (Randomness)**: The process of selecting tasks to form a ticket must be randomized. This ensures that running the generation process multiple times with the same input and parameters will produce a different, but equally valid, set of tickets each time.
 
 ### Key Entities *(include if feature involves data)*
 

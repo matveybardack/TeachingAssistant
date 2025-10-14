@@ -97,14 +97,24 @@ namespace ConsoleAppUserInterface
 
             try
             {
-                string content = File.ReadAllText(TicketsFilePath);
-                if (string.IsNullOrWhiteSpace(content))
+                var allLines = File.ReadAllLines(TicketsFilePath);
+                if (!allLines.Any())
                 {
                     Console.WriteLine("Файл с билетами пуст.");
+                    return;
                 }
-                else
+
+                Console.Write($"Введите количество билетов для вывода (всего {allLines.Length}): ");
+                if (!int.TryParse(Console.ReadLine(), out int count) || count <= 0)
                 {
-                    Console.WriteLine(content);
+                    Console.WriteLine("Неверный ввод. Будут выведены все билеты.");
+                    count = allLines.Length;
+                }
+
+                Console.WriteLine(); // Пустая строка для форматирования
+                foreach (var line in allLines.Take(count))
+                {
+                    Console.WriteLine(line);
                 }
             }
             catch (Exception ex)

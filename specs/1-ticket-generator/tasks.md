@@ -49,12 +49,12 @@
 **Purpose**: Implement the core ticket generation logic, following all rules from the specification.
 
 - [ ] T011 [US2] Request user to create the `TicketGenerator` service class in `ClassLibraryTicketGenerator/Services/TicketGenerator.cs` with a placeholder method.
-- [ ] T012 [US2] Edit `TicketGenerator.cs` to add logic for calculating the task type ratio.
-- [ ] T013 [US2] Edit `TicketGenerator.cs` to add the main generation loop.
-- [ ] T014 [US2] Edit `TicketGenerator.cs` to add the task selection logic that respects all generation rules and incorporates randomness to ensure varied results on each run.
-- [ ] T015 [US2] Edit `TicketGenerator.cs` to integrate the `TicketWriter` call inside the loop.
-- [ ] T016 [US2] Edit `TicketGenerator.cs` to add logic for stopping generation and reporting reasons.
-- [ ] T017 [US1, US2] Edit `Program.cs` to replace the placeholder stub call with the actual `TicketGenerator` call.
+- [ ] T012 [US2] Remove the `CalculateTypeRatio` method from `TicketGenerator.cs` as the pre-calculation approach is incorrect.
+- [ ] T013 [US2] Modify the main `Generate` loop in `TicketGenerator.cs`. It should repeatedly call a recursive search function to find the next valid ticket combination from the entire pool of tasks until no more unique, valid tickets can be formed.
+- [ ] T014 [US2] Rewrite the recursive search logic (`FindCombinationRecursive` and `IsValidCombination`). The new logic must build and validate ticket candidates on the fly, checking for complexity, theme diversity, and task uniqueness, without relying on a pre-calculated type ratio.
+- [ ] T015 [US2] Ensure the main loop in `TicketGenerator.cs` correctly integrates with the `TicketWriter` to save valid tickets as they are found.
+- [ ] T016 [US2] Edit `TicketGenerator.cs` to add logic for gracefully stopping generation when no more valid tickets can be formed and reporting the reason to the user.
+- [ ] T017 [US1, US2] Edit `Program.cs` to replace the placeholder stub call with the actual `TicketGenerator` call, passing all required parameters.
 
 ---
 
