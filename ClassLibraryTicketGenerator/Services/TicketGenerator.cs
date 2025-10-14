@@ -5,10 +5,6 @@ using System.Linq;
 
 namespace ClassLibraryTicketGenerator.Services
 {
-    /// <summary>
-    /// Service responsible for the core logic of generating tickets
-    /// based on a set of rules.
-    /// </summary>
     public class TicketGenerator
     {
         private readonly TicketWriter _ticketWriter;
@@ -19,20 +15,16 @@ namespace ClassLibraryTicketGenerator.Services
         }
 
         /// <summary>
-        /// Main method to orchestrate the ticket generation process.
+        /// Главный метод генерации (сервис).
         /// </summary>
         public void Generate(List<Models.Task> allTasks, int targetComplexity, int tolerance)
         {
-            // Placeholder for the generation algorithm.
-            // We will implement this in the next steps.
-            System.Console.WriteLine("[DEBUG] Generation algorithm started.");
-
             _ticketWriter.Initialize();
 
             var typeRatio = CalculateTypeRatio(allTasks);
             if (!typeRatio.Any())
             {
-                Console.WriteLine("Generation stopped. Reason: Not enough tasks to determine a type ratio.");
+                Console.WriteLine("Генерация остановлена. Недостаточно заданий для генерации.");
                 return;
             }
 
@@ -61,21 +53,20 @@ namespace ClassLibraryTicketGenerator.Services
                     var newTicket = new Ticket(ticketCounter++, newTicketTaskIds);
                     _ticketWriter.AppendTicket(newTicket);
                     generatedTickets.Add(new HashSet<int>(newTicketTaskIds));
-                    Console.WriteLine($"Successfully generated Ticket #{newTicket.TicketNumber}.");
+                    Console.WriteLine($"Сгенерирован Билет #{newTicket.TicketNumber}.");
                 }
                 else
                 {
-                    Console.WriteLine("Generation stopped. Could not find a valid combination for the next ticket.");
+                    Console.WriteLine("Генерация остановлена. Не найдена уникальная комбинация заданий для билета.");
                     break;
                 }
             }
-            Console.WriteLine($"[DEBUG] Generation algorithm finished. Total tickets created: {ticketCounter - 1}.");
         }
 
         private List<int> FindCombination(List<Models.Task> availableTasks, Dictionary<string, int> typeRatio, Dictionary<string, List<Models.Task>> tasksByType, double targetComplexity, int tolerance, int tasksPerTicket, HashSet<HashSet<int>> existingTickets, Random random)
         {
             var shuffledTasks = availableTasks.OrderBy(x => random.Next()).ToList();
-            var combinations = GetCombinations(shuffledTasks, tasksPerTicket);
+            var combinations = GetCombinations(shuffledTasks, tasksPerTicket); // сюда возвращается ошибка
 
             foreach (var combo in combinations)
             {
@@ -90,19 +81,28 @@ namespace ClassLibraryTicketGenerator.Services
 
         private bool IsValidCombination(List<Models.Task> tasks, Dictionary<string, int> typeRatio, double targetComplexity, int tolerance, HashSet<HashSet<int>> existingTickets)
         {
-            var currentTypeCounts = tasks.GroupBy(t => t.Type).ToDictionary(g => g.Key, g => g.Count());
-            if (typeRatio.Count != currentTypeCounts.Count || !typeRatio.All(kvp => currentTypeCounts.ContainsKey(kvp.Key) && currentTypeCounts[kvp.Key] == kvp.Value))
+            // ✅ Убрано жёсткое сравнение с typeRatio, т.к. теперь приоритет у сложности
+            // (typeRatio не используется в MVP, по спецификации)
+            // Поэтому просто проверим, что все задачи уникальны
+            if (tasks.Select(t => t.Id).Distinct().Count() != tasks.Count)
                 return false;
 
+            // 🔁 Было: проверка по темам, оставим, если нужно разнообразие
             if (tasks.Select(t => t.Theme).Distinct().Count() < 2)
                 return false;
-            
-            double avgComplexity = tasks.Average(t => t.Complexity);
+
+            // ✅ Изменено: теперь считаем не среднее, а СУММУ сложностей
+            double totalComplexity = tasks.Sum(t => t.Complexity);
+
+            // ✅ Изменено: теперь диапазон по сумме сложностей, а не по средней
             double minComplexity = targetComplexity * (1 - tolerance / 100.0);
             double maxComplexity = targetComplexity * (1 + tolerance / 100.0);
-            if (avgComplexity < minComplexity || avgComplexity > maxComplexity)
+
+            // Проверка попадания в диапазон
+            if (totalComplexity < minComplexity || totalComplexity > maxComplexity)
                 return false;
 
+            // Проверка уникальности билета
             var currentTicketSignature = new HashSet<int>(tasks.Select(t => t.Id));
             if (existingTickets.Contains(currentTicketSignature))
                 return false;
@@ -146,7 +146,7 @@ namespace ClassLibraryTicketGenerator.Services
         }
     }
 
-    // Custom comparer for HashSet<int> to allow storing them in another HashSet
+    // Хранение хэшсетов из других хэшсетов
     public class HashSetEqualityComparer<T> : IEqualityComparer<HashSet<T>>
     {
         public bool Equals(HashSet<T> x, HashSet<T> y)
@@ -163,12 +163,12 @@ namespace ClassLibraryTicketGenerator.Services
                 return 0;
 
             int hashCode = 0;
-            foreach (T item in obj.OrderBy(i => i)) // Order to ensure hash code is consistent
+            foreach (T item in obj.OrderBy(i => i)) // Порядок обеспечения согласованности хэш-кода
             {
                 hashCode ^= item.GetHashCode();
             }
             return hashCode;
         }
-}
+    }
 }
 

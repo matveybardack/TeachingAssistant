@@ -39,9 +39,9 @@ As a teacher, I want to trigger the generation of a set of exam tickets from a l
 ## Clarifications
 
 ### Session 2025-10-12
-- Q: How should the target complexity for ticket generation be calculated? → A: The user (teacher) manually enters the desired target complexity value at the start.
-- Q: How should the program determine the ratio of task types for the tickets? → A: Calculate the ratio based on the overall count of each task type in the entire input file.
-- Q: How should the program determine the fixed number of tasks that go into each ticket? → A: The number of tasks is the sum of the smallest integers that satisfy the calculated type ratio (e.g., a 2:1 ratio results in 3 tasks per ticket).
+- Q: How is ticket complexity defined? → A: It is the **total sum** of the complexities of its constituent tasks.
+- Q: How is the target complexity determined? → A: The user manually enters the target **total complexity** for a single ticket.
+- Q: Are there any strict rules for task types or themes? → A: No, the primary goal is to meet the complexity rule. Other distributions are secondary.
 - Q: If tickets have already been generated and the user selects "1. Generate Tickets" again, what should the program do? → A: Immediately ask for new parameters and overwrite the old `tickets.txt` file upon successful generation.
 - Q: How should the application handle semicolons that are part of the task's text? → A: For the MVP, it is assumed that the input `tasks.txt` file is always correctly formatted and task text does not contain semicolons.
 
@@ -52,7 +52,7 @@ As a teacher, I want to trigger the generation of a set of exam tickets from a l
 -   **FR-001**: System MUST read tasks from a text file (`tasks.txt`).
 -   **FR-002**: Each line in the input file MUST represent a single task with the format: `Тема; Тип; Сложность; Текст задания`. It is assumed for the MVP that the task text itself will not contain semicolons.
 -   **FR-003**: System MUST assign a unique integer ID to each task upon reading (e.g., based on line number).
--   **FR-004**: System MUST prompt the user (teacher) to input the **target complexity** and the **allowed complexity tolerance** (in percent) before generation.
+-   **FR-004**: System MUST prompt the user (teacher) to input the **target total complexity for a ticket** and an allowed **complexity tolerance** (in percent) before generation.
 -   **FR-005**: System MUST save the generated tickets to an output file (`tickets.txt`), overwriting any previous version of the file.
 -   **FR-006**: The output format for a ticket in the file MUST be a single line: `Билет N; (ID) Тема; Тип; Сложность; Текст; (ID) ...`.
 -   **FR-007**: System MUST stop generation if it's impossible to create a new ticket that satisfies all rules and inform the user of the reason.
@@ -60,13 +60,17 @@ As a teacher, I want to trigger the generation of a set of exam tickets from a l
 
 ### Generation Rules (Strict Priority Order)
 
--   **GR-A.1 (Ticket Complexity)**: The average arithmetic complexity of each ticket MUST be within a user-defined percentage tolerance of a target value. Generation stops if a new ticket cannot meet this criterion.
--   **GR-B.1 (Thematic Distribution)**: A ticket MUST NOT contain tasks that are all from the same theme. It must contain tasks from at least two different themes.
--   **GR-C.1 (Type Ratio & Task Count)**: All tickets MUST have a fixed number of tasks and the same ratio of task types. The ratio is determined by the program based on the overall count of each task type in the input file. The number of tasks per ticket is the smallest possible integer sum that satisfies this ratio (e.g., a 2:1 ratio means 3 tasks per ticket). All tasks within a single ticket MUST be unique (a task cannot appear more than once in the same ticket).
--   **GR-D.1 (Ticket Uniqueness)**: No two generated tickets can be identical.
-    - A ticket is defined by the set of its task IDs; the order of tasks within a ticket does not matter for comparison.
-    - While individual tasks can appear in multiple different tickets, a complete set of task IDs cannot be repeated.
-    - The system must check for uniqueness before adding a newly generated ticket to the final list.
+-   **GR-A.1 (Ticket Total Complexity - HIGHEST PRIORITY)**: The **total sum** of the complexities of all tasks in a single ticket MUST be within a user-defined percentage tolerance of the target total complexity.
+    - *Example*: If target is `10` and tolerance is `20%`, the sum must be between `8` and `12` (inclusive).
+    - This is the primary and most important condition for forming a ticket. Generation stops if no new combination of tasks can satisfy this rule.
+
+-   **GR-B.1 (Task Uniqueness in Ticket)**: All tasks within a single ticket MUST be unique.
+
+-   **GR-C.1 (Ticket Uniqueness)**: No two generated tickets can be identical (i.e., contain the exact same set of task IDs). The order of tasks does not matter.
+
+-   **GR-D.1 (Randomness)**: The process of selecting tasks to form a ticket must be randomized. This ensures that running the generation process multiple times with the same input and parameters will produce a different, but equally valid, set of tickets each time.
+
+-   **NOTE on Task Types/Themes**: There are **no strict rules** regarding the distribution of task types or themes within a ticket. The algorithm's primary goal is to satisfy the complexity rule (GR-A.1).
 
 ### Key Entities *(include if feature involves data)*
 
@@ -78,5 +82,5 @@ As a teacher, I want to trigger the generation of a set of exam tickets from a l
 ### Measurable Outcomes
 
 -   **SC-001**: The application generates the maximum possible number of tickets that satisfy all generation rules from a given input file.
--   **SC-002**: Every ticket in the output `tickets.txt` file successfully passes validation against all specified generation rules (GR-A.1 to GR-D.1).
+-   **SC-002**: Every ticket in the output `tickets.txt` file successfully passes validation against the primary complexity rule (GR-A.1) and uniqueness rules (GR-B.1, GR-C.1).
 -   **SC-003**: When generation stops because a rule cannot be met, the application provides a clear, correct message to the user identifying the blocking rule.

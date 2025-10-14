@@ -55,7 +55,7 @@ namespace ClassLibraryTicketGenerator.Services
                 }
             }
 
-            File.AppendAllText(_outputFilePath, ticketLine.ToString().TrimEnd(' ', ';') + System.Environment.NewLine);
+            File.AppendAllText(_outputFilePath, ticketLine.ToString().TrimEnd(' ', ';') + Environment.NewLine);
         }
     }
 }

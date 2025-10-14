@@ -10,7 +10,7 @@ namespace ClassLibraryTicketGenerator.Models
     /// Представляет метаданные одной задачи, считанные из входного файла.
     /// Полный текст задания не сохраняется для экономии памяти.
     /// </summary>
-    public class Task
+    public class Task : IComparable<Task>
     {
         /// <summary>
         /// Уникальный идентификатор задачи, номер строки из исходного файла.
@@ -38,6 +38,17 @@ namespace ClassLibraryTicketGenerator.Models
             Theme = theme;
             Type = type;
             Complexity = complexity;
+        }
+
+        public int CompareTo(Task other)
+        {
+            if (other == null)
+                return 1;
+
+            // Основное сравнение — по Id
+            int result = Id.CompareTo(other.Id);
+
+            return result;
         }
     }
 }

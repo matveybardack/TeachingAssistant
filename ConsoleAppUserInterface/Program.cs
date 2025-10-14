@@ -10,20 +10,19 @@ namespace ConsoleAppUserInterface
 {
     internal class Program
     {
-        // Configuration
+        // Пить к данным
         private const string TasksFilePath = "tasks.txt";
         private const string TicketsFilePath = "tickets.txt";
 
         static void Main(string[] args)
         {
             var taskReader = new TaskReader();
-            // We read all task metadata into memory once.
+            // Чтение метаданных из входного файла (имеется ввиду пользовательские мета)
             var allTasks = taskReader.ReadTasks(TasksFilePath).ToList();
+
             if (!allTasks.Any())
             {
-                Console.WriteLine($"Error: The task file '{TasksFilePath}' is empty or could not be read.");
-                Console.WriteLine("Press any key to exit.");
-                Console.ReadKey();
+                Console.WriteLine($"Ошибка: Файл с заданиями '{TasksFilePath}' пуст или не может быть прочитан.");
                 return;
             }
 
@@ -33,11 +32,11 @@ namespace ConsoleAppUserInterface
             bool running = true;
             while (running)
             {
-                Console.WriteLine("\n--- Ticket Generator Menu ---");
-                Console.WriteLine("1. Generate Tickets");
-                Console.WriteLine("2. View Generated Tickets");
-                Console.WriteLine("3. Exit");
-                Console.Write("Select an option: ");
+                Console.WriteLine("\n--- Меню ---");
+                Console.WriteLine("1. Генерация билетов");
+                Console.WriteLine("2. Просмотр сгенерированных билетов");
+                Console.WriteLine("3. Выход");
+                Console.Write("Выберите действие: ");
 
                 switch (Console.ReadLine())
                 {
@@ -51,7 +50,7 @@ namespace ConsoleAppUserInterface
                         running = false;
                         break;
                     default:
-                        Console.WriteLine("Invalid option. Please try again.");
+                        Console.WriteLine("Неверный ввод.");
                         break;
                 }
             }
@@ -59,40 +58,40 @@ namespace ConsoleAppUserInterface
 
         private static void GenerateTickets(TicketGenerator ticketGenerator, List<ClassLibraryTicketGenerator.Models.Task> allTasks)
         {
-            Console.WriteLine("\n--- Generate New Tickets ---");
+            Console.WriteLine("\n--- Генерация новых билетов ---");
             try
             {
-                Console.Write("Enter target complexity: ");
+                Console.Write("Введите сложность билета: ");
                 if (!int.TryParse(Console.ReadLine(), out int targetComplexity))
                 {
-                    Console.WriteLine("Invalid number for complexity.");
+                    Console.WriteLine("Неправильный формат сложности.");
                     return;
                 }
 
-                Console.Write("Enter complexity tolerance (%): ");
+                Console.Write("Введите погрешность сложности билетов (%): ");
                 if (!int.TryParse(Console.ReadLine(), out int tolerance))
                 {
-                    Console.WriteLine("Invalid number for tolerance.");
+                    Console.WriteLine("Неверный формат погрешности.");
                     return;
                 }
 
-                Console.WriteLine("\nStarting generation process...");
+                Console.WriteLine("\n - Начало генерации. - ");
                 ticketGenerator.Generate(allTasks, targetComplexity, tolerance);
-                Console.WriteLine("Generation process finished.");
+                Console.WriteLine("\n - Генерация завершена. -");
 
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"An error occurred: {ex.Message}");
+                Console.WriteLine($"Ошибка: {ex.Message}");
             }
         }
 
         private static void ViewGeneratedTickets()
         {
-            Console.WriteLine("\n--- Viewing Generated Tickets ---");
+            Console.WriteLine("\n--- Просмотр сгенерированных билетов ---");
             if (!File.Exists(TicketsFilePath))
             {
-                Console.WriteLine("No tickets have been generated yet. Please use option 1 first.");
+                Console.WriteLine("Не найден файл с билетами.");
                 return;
             }
 
@@ -101,7 +100,7 @@ namespace ConsoleAppUserInterface
                 string content = File.ReadAllText(TicketsFilePath);
                 if (string.IsNullOrWhiteSpace(content))
                 {
-                    Console.WriteLine("The ticket file is empty.");
+                    Console.WriteLine("Файл с билетами пуст.");
                 }
                 else
                 {
@@ -110,7 +109,7 @@ namespace ConsoleAppUserInterface
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"An error occurred while reading the ticket file: {ex.Message}");
+                Console.WriteLine($"Ошибка чтения файла с билетами: {ex.Message}");
             }
         }
     }
