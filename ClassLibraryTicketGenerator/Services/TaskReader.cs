@@ -16,12 +16,6 @@ namespace ClassLibraryTicketGenerator.Services
         /// <returns>Множество объектов Task</returns>
         public IEnumerable<Models.Task> ReadTasks(string filePath)
         {
-            if (!File.Exists(filePath))
-            {
-                // Исключение (добавлю позже, возможно)
-                yield break;
-            }
-
             int currentLine = 1;
             foreach (var line in File.ReadLines(filePath))
             {

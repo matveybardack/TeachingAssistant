@@ -40,6 +40,11 @@ namespace ClassLibraryTicketGenerator.Models
             Complexity = complexity;
         }
 
+        /// <summary>
+        /// Сравнение по ID
+        /// </summary>
+        /// <param name="other"> ID задания (номер строки) </param>
+        /// <returns></returns>
         public int CompareTo(Task other)
         {
             if (other == null)

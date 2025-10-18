@@ -3,7 +3,7 @@
 namespace ClassLibraryTicketGenerator.Models
 {
     /// <summary>
-    /// Represents a single generated ticket, containing a collection of task IDs.
+    /// Представляет один сгенерированный билет.
     /// </summary>
     public class Ticket
     {

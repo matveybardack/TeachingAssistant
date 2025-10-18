@@ -56,6 +56,11 @@ namespace ConsoleAppUserInterface
             }
         }
 
+        /// <summary>
+        /// Генерация билетов по пользовательским параметрам
+        /// </summary>
+        /// <param name="ticketGenerator"> объект генератора </param>
+        /// <param name="allTasks"> список всех заданий </param>
         private static void GenerateTickets(TicketGenerator ticketGenerator, List<ClassLibraryTicketGenerator.Models.Task> allTasks)
         {
             Console.WriteLine("\n--- Генерация новых билетов ---");
@@ -86,6 +91,9 @@ namespace ConsoleAppUserInterface
             }
         }
 
+        /// <summary>
+        /// Просмотр сгенерированных билетов (кол-во выводимых определено пользователем)
+        /// </summary>
         private static void ViewGeneratedTickets()
         {
             Console.WriteLine("\n--- Просмотр сгенерированных билетов ---");
@@ -111,7 +119,7 @@ namespace ConsoleAppUserInterface
                     count = allLines.Length;
                 }
 
-                Console.WriteLine(); // Пустая строка для форматирования
+                Console.WriteLine();
                 foreach (var line in allLines.Take(count))
                 {
                     Console.WriteLine(line);
