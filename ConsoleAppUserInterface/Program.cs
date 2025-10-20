@@ -27,7 +27,7 @@ namespace ConsoleAppUserInterface
             }
 
             var ticketWriter = new TicketWriter(TicketsFilePath, TasksFilePath);
-            var ticketGenerator = new TicketGenerator(ticketWriter);
+            var ticketGenerator = new TicketGenerator(ticketWriter, allTasks);
 
             bool running = true;
             while (running)
@@ -81,7 +81,7 @@ namespace ConsoleAppUserInterface
                 }
 
                 Console.WriteLine("\n - Начало генерации. - ");
-                ticketGenerator.Generate(allTasks, targetComplexity, tolerance);
+                ticketGenerator.Generate(targetComplexity, tolerance);
                 Console.WriteLine("\n - Генерация завершена. -");
 
             }
