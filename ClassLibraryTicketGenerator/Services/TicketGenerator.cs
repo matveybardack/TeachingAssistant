@@ -5,9 +5,8 @@ namespace ClassLibraryTicketGenerator.Services
     public class TicketGenerator
     {
         private readonly TicketWriter _ticketWriter;
-        private const int MaxAttemptsPerTicket = 5000;
-
-        private List<Models.Task> _tasks; // задания
+        private const int MaxAttemptsPerTicket = 5_000;
+        private readonly List<Models.Task> _tasks; // задания
 
         public List<Models.Task> Tasks { get { return _tasks; } }
 

@@ -38,7 +38,6 @@ namespace ClassLibraryTicketGenerator.Services
                         );
                     }
                 }
-                // Возможно логирование непрочитанных чтрок
                 currentLine++;
             }
         }
