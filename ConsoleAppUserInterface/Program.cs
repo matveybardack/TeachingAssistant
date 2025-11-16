@@ -16,9 +16,10 @@ namespace ConsoleAppUserInterface
 
         static void Main(string[] args)
         {
-            var taskReader = new TaskReader();
-            // Чтение метаданных из входного файла (имеется ввиду пользовательские мета)
-            var allTasks = taskReader.ReadTasks(TasksFilePath).ToList();
+            // TODO! изменить на строку подключения к БД
+            var taskReader = new TaskReader(TasksFilePath);
+            // TODO! пересмотреть загрузку всех заданий в память
+            var allTasks = taskReader.ReadTasks().ToList();
 
             if (!allTasks.Any())
             {

@@ -1,46 +1,58 @@
 ﻿using ClassLibraryTicketGenerator.Models;
 using System.Collections.Generic;
+using System.Data.SQLite;
 using System.IO;
 
 namespace ClassLibraryTicketGenerator.Services
 {
     /// <summary>
-    /// Чтение и gfhcbyu входного файла.
+    /// Чтение задач из базы данных SQLite с учетом нормализованных справочников Theme и Type.
     /// </summary>
     public class TaskReader
     {
-        /// <summary>
-        /// Считывает файл задачи построчно и возвращает объекты метаданных задачи.
-        /// </summary>
-        /// <param name="filePath">Путь к файлу tasks.txt file.</param>
-        /// <returns>Множество объектов Task</returns>
-        public IEnumerable<Models.Task> ReadTasks(string filePath)
+        private readonly string _connectionString;
+
+        public TaskReader(string connectionString)
         {
-            int currentLine = 1;
-            foreach (var line in File.ReadLines(filePath))
+            _connectionString = connectionString;
+        }
+
+        /// <summary>
+        /// Возвращает задачи с текстами Theme и Type. Пропускает строки, где любое значение null.
+        /// </summary>
+        public IEnumerable<Models.Task> ReadTasks()
+        {
+            using var connection = new SQLiteConnection(_connectionString);
+            connection.Open();
+
+            string sql = GLOBAL_Query.Queries.ReadTasksByIds;
+
+            using var command = new SQLiteCommand(sql, connection);
+            using var reader = command.ExecuteReader();
+
+            while (reader.Read())
             {
-                if (string.IsNullOrWhiteSpace(line))
+                // Null проверка
+                if (reader["TaskId"] == DBNull.Value ||
+                    reader["ThemeText"] == DBNull.Value ||
+                    reader["TypeText"] == DBNull.Value ||
+                    reader["Difficulty"] == DBNull.Value)
                 {
-                    currentLine++;
                     continue;
                 }
 
-                var parts = line.Split(';');
-                if (parts.Length == 4) // Theme;Type;Complexity;Text
-                {
-                    if (int.TryParse(parts[2].Trim(), out int complexity))
-                    {
-                        yield return new Models.Task(
-                            id: currentLine,
-                            theme: parts[0].Trim(),
-                            type: parts[1].Trim(),
-                            complexity: complexity
-                        );
-                    }
-                }
-                currentLine++;
+                int taskId = Convert.ToInt32(reader["TaskId"]);
+                string theme = reader["ThemeText"].ToString().Trim();
+                string type = reader["TypeText"].ToString().Trim();
+                int difficulty = Convert.ToInt32(reader["Difficulty"]);
+
+                yield return new Models.Task(
+                    id: taskId,
+                    theme: theme,
+                    type: type,
+                    complexity: difficulty
+                );
             }
         }
     }
 }
-
