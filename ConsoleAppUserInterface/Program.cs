@@ -11,7 +11,7 @@ namespace ConsoleAppUserInterface
     internal class Program
     {
         // Пить к данным
-        private const string TasksFilePath = "tasks.txt";
+        private const string TasksFilePath = "Data Source=Tasks;Version=3;";
         private const string TicketsFilePath = "tickets.txt";
 
         static void Main(string[] args)

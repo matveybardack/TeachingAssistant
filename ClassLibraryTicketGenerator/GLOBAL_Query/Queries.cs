@@ -18,15 +18,15 @@ namespace ClassLibraryTicketGenerator.GLOBAL_Query
                     ty.TaskType AS TypeText,
                     t.Difficulty
                 FROM Task t
-                LEFT JOIN Theme th ON t.Theme = th.Themeld
-                LEFT JOIN Type ty ON t.Type = ty.Typeld
+                LEFT JOIN Theme th ON t.Theme = th.ThemeId
+                LEFT JOIN Type ty ON t.Type = ty.TypeId
             ";
 
         internal static string GetTaskByIds(string parameters) => $@"
                 SELECT t.TaskId, th.TaskTheme AS ThemeText, ty.TaskType AS TypeText, t.Difficulty
                 FROM Task t
-                LEFT JOIN Theme th ON t.Theme = th.Themeld
-                LEFT JOIN Type ty ON t.Type = ty.Typeld
+                LEFT JOIN Theme th ON t.Theme = th.ThemeId
+                LEFT JOIN Type ty ON t.Type = ty.TypeId
                 WHERE t.TaskId IN ({parameters})
             ";
     }
