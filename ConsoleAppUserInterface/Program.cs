@@ -1,34 +1,15 @@
-﻿using System;
-using System;
-using System.IO;
-using System.Linq;
+﻿using ClassLibraryTicketGenerator.GLOBAL_Query;
 using ClassLibraryTicketGenerator.Services;
-using ClassLibraryTicketGenerator.Models;
 
 
 namespace ConsoleAppUserInterface
 {
     internal class Program
     {
-        // Пить к данным
-        private const string TasksFilePath = "Data Source=Tasks;Version=3;";
-        private const string TicketsFilePath = "tickets.txt";
-
         static void Main(string[] args)
         {
-            // TODO! изменить на строку подключения к БД
-            var taskReader = new TaskReader(TasksFilePath);
-            // TODO! пересмотреть загрузку всех заданий в память
-            var allTasks = taskReader.ReadTasks().ToList();
-
-            if (!allTasks.Any())
-            {
-                Console.WriteLine($"Ошибка: Файл с заданиями '{TasksFilePath}' пуст или не может быть прочитан.");
-                return;
-            }
-
-            var ticketWriter = new TicketWriter(TicketsFilePath, TasksFilePath);
-            var ticketGenerator = new TicketGenerator(ticketWriter, allTasks);
+            var taskReader = new TaskReader(Queries.TasksFilePath);
+            var ticketWriter = new TicketWriter(Queries.TicketsFilePath, Queries.TasksFilePath);
 
             bool running = true;
             while (running)
@@ -42,7 +23,7 @@ namespace ConsoleAppUserInterface
                 switch (Console.ReadLine())
                 {
                     case "1":
-                        GenerateTickets(ticketGenerator, allTasks);
+                        GenerateTickets(ticketWriter, taskReader);
                         break;
                     case "2":
                         ViewGeneratedTickets();
@@ -62,7 +43,7 @@ namespace ConsoleAppUserInterface
         /// </summary>
         /// <param name="ticketGenerator"> объект генератора </param>
         /// <param name="allTasks"> список всех заданий </param>
-        private static void GenerateTickets(TicketGenerator ticketGenerator, List<ClassLibraryTicketGenerator.Models.Task> allTasks)
+        private static void GenerateTickets(TicketWriter ticketWriter, TaskReader taskReader)
         {
             Console.WriteLine("\n--- Генерация новых билетов ---");
             try
@@ -74,7 +55,7 @@ namespace ConsoleAppUserInterface
                     return;
                 }
 
-                Console.Write("Введите погрешность сложности билетов (%): ");
+                Console.Write("Введите погрешность сложности билетов (целое): ");
                 if (!int.TryParse(Console.ReadLine(), out int tolerance))
                 {
                     Console.WriteLine("Неверный формат погрешности.");
@@ -82,7 +63,21 @@ namespace ConsoleAppUserInterface
                 }
 
                 Console.WriteLine("\n - Начало генерации. - ");
-                ticketGenerator.Generate(targetComplexity, tolerance);
+                TicketGenerator ticketGenerator = new TicketGenerator(
+                    ticketWriter,
+                    taskReader,
+                    new Dictionary<int, int>
+                    {
+                        { 1, 2 },
+                        { 2, 2 },
+                        { 3, 1 },
+                        { 4, 3 },
+                    },
+                    targetComplexity,
+                    tolerance
+                );
+
+                ticketGenerator.GenerateAllTickets();
                 Console.WriteLine("\n - Генерация завершена. -");
 
             }
@@ -98,7 +93,7 @@ namespace ConsoleAppUserInterface
         private static void ViewGeneratedTickets()
         {
             Console.WriteLine("\n--- Просмотр сгенерированных билетов ---");
-            if (!File.Exists(TicketsFilePath))
+            if (!File.Exists(Queries.TicketsFilePath))
             {
                 Console.WriteLine("Не найден файл с билетами.");
                 return;
@@ -106,7 +101,7 @@ namespace ConsoleAppUserInterface
 
             try
             {
-                var allLines = File.ReadAllLines(TicketsFilePath);
+                var allLines = File.ReadAllLines(Queries.TicketsFilePath);
                 if (!allLines.Any())
                 {
                     Console.WriteLine("Файл с билетами пуст.");

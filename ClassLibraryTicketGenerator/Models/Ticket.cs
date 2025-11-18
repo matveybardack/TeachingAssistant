@@ -5,7 +5,7 @@ namespace ClassLibraryTicketGenerator.Models
     /// <summary>
     /// Представляет один сгенерированный билет.
     /// </summary>
-    public class Ticket
+    public struct Ticket
     {
         /// <summary>
         /// Порядковый номер билета (например, «Билет 1»).

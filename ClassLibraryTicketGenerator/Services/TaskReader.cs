@@ -6,7 +6,7 @@ using System.IO;
 namespace ClassLibraryTicketGenerator.Services
 {
     /// <summary>
-    /// Чтение задач из базы данных SQLite с учетом нормализованных справочников Theme и Type.
+    /// Чтение задач из базы данных SQLite. (только id)
     /// </summary>
     public class TaskReader
     {
@@ -18,39 +18,33 @@ namespace ClassLibraryTicketGenerator.Services
         }
 
         /// <summary>
-        /// Возвращает задачи с текстами Theme и Type. Пропускает строки, где любое значение null.
+        /// Ленивая загрузка всех задач.
         /// </summary>
         public IEnumerable<Models.Task> ReadTasks()
         {
             using var connection = new SQLiteConnection(_connectionString);
             connection.Open();
 
-            string sql = GLOBAL_Query.Queries.ReadTasksByIds;
+            string sql = GLOBAL_Query.Queries.ReadAllTasks;
 
             using var command = new SQLiteCommand(sql, connection);
             using var reader = command.ExecuteReader();
 
             while (reader.Read())
             {
-                // Null проверка
                 if (reader["TaskId"] == DBNull.Value ||
-                    reader["ThemeText"] == DBNull.Value ||
-                    reader["TypeText"] == DBNull.Value ||
+                    reader["Theme"] == DBNull.Value ||
+                    reader["Type"] == DBNull.Value ||
                     reader["Difficulty"] == DBNull.Value)
                 {
                     continue;
                 }
 
-                int taskId = Convert.ToInt32(reader["TaskId"]);
-                string theme = reader["ThemeText"].ToString().Trim();
-                string type = reader["TypeText"].ToString().Trim();
-                int difficulty = Convert.ToInt32(reader["Difficulty"]);
-
                 yield return new Models.Task(
-                    id: taskId,
-                    theme: theme,
-                    type: type,
-                    complexity: difficulty
+                    id: Convert.ToInt32(reader["TaskId"]),
+                    theme: Convert.ToInt32(reader["Theme"]),
+                    type: Convert.ToInt32(reader["Type"]),
+                    complexity: Convert.ToInt32(reader["Difficulty"])
                 );
             }
         }

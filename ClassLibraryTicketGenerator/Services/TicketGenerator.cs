@@ -1,228 +1,216 @@
 ﻿using ClassLibraryTicketGenerator.Models;
+using Task = ClassLibraryTicketGenerator.Models.Task;
 
 namespace ClassLibraryTicketGenerator.Services
 {
     public class TicketGenerator
     {
         private readonly TicketWriter _ticketWriter;
-        private const int MaxAttemptsPerTicket = 5_000;
-        private readonly List<Models.Task> _tasks; // задания
+        private const int MaxAttemptsPerTicket = 10_000;
+        private readonly TaskReader _taskReader; // задания
 
-        public List<Models.Task> Tasks { get { return _tasks; } }
+        private readonly Dictionary<int, int> _tasksPerType;
+        private readonly int _targetDifficulty;
+        private readonly int _tolerance;
 
-        public TicketGenerator(TicketWriter ticketWriter, List<Models.Task> tasks)
-        {
-            _ticketWriter = ticketWriter;
-            _tasks = tasks;
-        }
+        private readonly Random _random = new();
 
-        /// <summary>
-        /// Главный метод генерации (сервис).
-        /// </summary>
-        /// <param name="targetComplexity"> заданная сложность </param>
-        /// <param name="tolerance"> относительная погрешеность сложности </param>
-        public void Generate(int targetComplexity, int tolerance)
-        {
-            // Обновление выходного файла
-            _ticketWriter.Initialize();
+        // Список использованных TaskId
+        private readonly HashSet<int> _usedTaskIds = new();
 
-            var (selectedTypes, estimatedTaskCount, minTasks, maxTasks) = AnalyzeTypes( targetComplexity, tolerance);
-
-            // Генерация всех комбинаций типов
-            var typeCombinations = new List<List<string>>();
-            for (int n = minTasks; n <= maxTasks; n++)
-                typeCombinations.AddRange(GetTypeCombinations(selectedTypes, n));
-
-            if (!typeCombinations.Any())
-            {
-                Console.WriteLine("Не удалось сгенерировать комбинации типов.");
-                return;
-            }
-
-            // Выбор оптимальной комбинации
-            var (bestCombination, bestTickets) = SelectBestCombination(typeCombinations, targetComplexity, tolerance);
-
-            // Запись билетов в файл
-            int ticketCounter = 1;
-            foreach (var ticketIds in bestTickets)
-                _ticketWriter.AppendTicket(new Ticket(ticketCounter++, ticketIds.ToList()));
-
-            Console.WriteLine($"Сгенерировано {bestTickets.Count} билетов для комбинации типов: {string.Join(", ", bestCombination)}");
-        }
-
-        /// <summary>
-        /// Выбор лучшей комбинации типов заданий по количеству сгенерированных билетов
-        /// </summary>
-        /// <param name="typeCombinations"> все комбинации типов </param>
-        /// <param name="targetComplexity"> заданная сложность </param>
-        /// <param name="tolerance"> процентная погрешность сложности </param>
-        /// <returns> кортеж из лучшей комбинации типов и списка хэшов заданий сгенерированных билетов </returns>
-        private (List<string> bestCombo, List<HashSet<int>> bestTickets) SelectBestCombination(
-            List<List<string>> typeCombinations,
-            int targetComplexity,
+        public TicketGenerator(
+            TicketWriter ticketWriter, 
+            TaskReader taskReader,
+            Dictionary<int, int> tasksPerType,
+            int targetDifficulty,
             int tolerance)
         {
-            List<HashSet<int>> bestTickets = null;
-            List<string> bestCombo = null;
+            _ticketWriter = ticketWriter;
+            _taskReader = taskReader;
+            _tasksPerType = tasksPerType;
+            _targetDifficulty = targetDifficulty;
+            _tolerance = tolerance;
+        }
 
-            // рандомайзер
-            var random = new Random();
 
-            foreach (var combo in typeCombinations)
-            {
-                var tickets = GenerateTicketsForCombination(combo, targetComplexity, tolerance, random);
-                if (bestTickets == null || tickets.Count > bestTickets.Count)
-                {
-                    bestTickets = tickets;
-                    bestCombo = combo;
-                }
-            }
-
-            return (bestCombo, bestTickets ?? new List<HashSet<int>>());
+        /// <summary>
+        /// Формирует словарь задач по типу и выполняет просеивание по допустимой сложности.
+        /// Возвращает очищенный словарь: Type → List<Task>.
+        /// </summary>
+        public Dictionary<int, List<Task>> AnalyzeTypes()
+        {
+            var dict = LoadAndSortTasksByType();
+            var filtered = FilterTasksByDifficulty(dict);
+            return filtered;
         }
 
         /// <summary>
-        /// Генерация всех билетов для одной комбинации типов заданий
+        /// Загрузка и сортировка заданий по типу.
         /// </summary>
-        /// <param name="combo"> список комбинаций </param>
-        /// <param name="targetComplexity"> заданная сложнгсть  </param>
-        /// <param name="tolerance"> относительная погрешность сложности </param>
-        /// <returns> Список хэшсетов с ID заданий в билетах </returns>
-        private List<HashSet<int>> GenerateTicketsForCombination(
-            List<string> combo,
-            int targetComplexity,
-            int tolerance,
-            Random random)
+        /// <returns> словарь, где Key - это индекс типа задачи, а Value - список задач одного типа </returns>
+        private Dictionary<int, List<Task>> LoadAndSortTasksByType()
         {
-            var tickets = new List<HashSet<int>>();
+            var dictionary = _taskReader.ReadTasks()
+                .Where(t => _tasksPerType.ContainsKey(t.Type))
+                .GroupBy(t => t.Type)
+                .ToDictionary(g => g.Key, g => g.ToList());
 
-            // Группировка по типу
-            var tasksByType = Tasks.GroupBy(t => t.Type)
-                                      .ToDictionary(g => g.Key, g => g.ToList());
-
-            int attempts = MaxAttemptsPerTicket;
-            while (attempts > 0)
+            // Сортировка внутри каждого типа
+            foreach (var kvp in dictionary)
             {
-                var ticketTasks = new List<Models.Task>();
-                bool failed = false;
+                kvp.Value.Sort((a, b) => a.Complexity.CompareTo(b.Complexity));
+            }
 
-                foreach (var type in combo)
+            return dictionary;
+        }
+
+        /// <summary>
+        /// Фильтрация заданий внутри типов по допустимым интервалам сложности.
+        /// </summary>
+        /// <param name="dict"> нефильтрованный словарь </param>
+        /// <returns> просеянный словарь задач </returns>
+        /// <exception cref="ArgumentException"> какой-то тип не лежит в заданной сложности </exception>
+        private Dictionary<int, List<Task>> FilterTasksByDifficulty(Dictionary<int, List<Task>> dict)
+        {
+            var result = new Dictionary<int, List<Task>>();
+
+            // Наименьшая и наибольшая сложности в каждом типе
+            var minComplexity = dict.ToDictionary(k => k.Key, v => v.Value.First().Complexity);
+            var maxComplexity = dict.ToDictionary(k => k.Key, v => v.Value.Last().Complexity);
+
+            foreach (var n in dict.Keys)
+            {
+                int N = _tasksPerType[n];  // количество задач этого типа
+
+                // минимальная сумма сложностей всех остальных типов (минимумы)
+                int sumOthersMin = _tasksPerType
+                    .Where(kvp => kvp.Key != n)
+                    .Sum(kvp => kvp.Value * minComplexity[kvp.Key]);
+
+                // максимальная сумма сложностей остальных типов
+                int sumOthersMax = _tasksPerType
+                    .Where(kvp => kvp.Key != n)
+                    .Sum(kvp => kvp.Value * maxComplexity[kvp.Key]);
+
+                // Максимально допустимая сложность задачи типа n
+                double Smax = (double)(_targetDifficulty + _tolerance - sumOthersMin) / N;
+
+                // Минимально допустимая сложность задачи типа n
+                double Smin = (double)(_targetDifficulty - _tolerance - sumOthersMax) / N;
+
+
+                int left = dict[n].FindIndex(t => t.Complexity >= (int) Math.Floor(Smin));
+                int right = dict[n].FindLastIndex(t => t.Complexity <= (int) Math.Ceiling(Smax));
+
+                if (left == -1 || right == -1 || left > right)
                 {
-                    if (tasksByType[type].Count == 0)
+                    if (IdToString.TryConvertTypeIdToString(n, out string type))
+                        throw new ArgumentException($"Тип {type} не подходит для составления билетов по данной сложности");
+                }
+                else
+                {
+                    var filteredList = dict[n].GetRange(left, right - left + 1);
+                    result[n] = filteredList;
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Генерация билетов на основе отфильтрованных задач.
+        /// </summary>
+        /// <param name="filteredTasks"> просеянный словарь </param>
+        /// <returns> список сгенерированный билетов </returns>
+        private List<Ticket> Generate(Dictionary<int, List<Task>> filteredTasks)
+        {
+            var tasks = filteredTasks;
+            var tickets = new List<Ticket>();
+            int ticketNumber = 1;
+            int tokens = MaxAttemptsPerTicket;
+
+            while (tokens > 0)
+            {
+                tokens--;
+
+                // Список задач для билета
+                var selectedTasks = new List<Task>();
+
+                foreach (var kvp in _tasksPerType)
+                {
+                    int type = kvp.Key;
+                    int count = kvp.Value;
+
+                    if (!tasks.TryGetValue(type, out var candidates) || candidates.Count < count)
                     {
-                        failed = true;
-                        break;
+                        selectedTasks.Clear();
+                        break; // недостаточно задач для этого типа
                     }
 
-                    var availableTasks = tasksByType[type].Except(ticketTasks).ToList();
-                    if (!availableTasks.Any())
+                    var availableTasks = candidates
+                        .Where(t => !_usedTaskIds.Contains(t.Id))
+                        .ToList();
+
+                    if (availableTasks.Count < count)
                     {
-                        failed = true;
-                        break;
+                        selectedTasks.Clear();
+                        break; // недостаточно неиспользованных задач
                     }
 
-                    ticketTasks.Add(availableTasks[random.Next(availableTasks.Count)]);
+                    // Случайный выбор 'count' задач для типа
+                    var pickedTasks = new List<Task>();
+                    for (int i = 0; i < count; i++)
+                    {
+                        int index = _random.Next(availableTasks.Count);
+                        pickedTasks.Add(availableTasks[index]);
+                        availableTasks.RemoveAt(index);
+                    }
+
+                    selectedTasks.AddRange(pickedTasks);
                 }
 
-                if (!failed &&
-                    ticketTasks.Sum(t => t.Complexity) is int total &&
-                    total >= targetComplexity * (1 - tolerance / 100.0) &&
-                    total <= targetComplexity * (1 + tolerance / 100.0) &&
-                    ticketTasks.Select(t => t.Theme).Distinct().Count() > 1)
-                {
-                    var ticketIds = ticketTasks.Select(t => t.Id).ToHashSet();
-                    if (!tickets.Any(t => t.SetEquals(ticketIds)))
-                        tickets.Add(ticketIds);
-                }
+                if (selectedTasks.Count == 0)
+                    continue; // не удалось собрать билет, токен потрачен
 
-                attempts--;
+                // Проверка разнообразия тем
+                var themeGroups = selectedTasks.GroupBy(t => t.Theme);
+                if (themeGroups.Count() < 2)
+                    continue; // все задания одной темы
+
+                // Проверка суммарной сложности
+                int sumComplexity = selectedTasks.Sum(t => t.Complexity);
+                if (sumComplexity < _targetDifficulty - _tolerance || sumComplexity > _targetDifficulty + _tolerance)
+                    continue; // не удовлетворяет по сложности
+
+                // Билет успешно сгенерирован
+                var ticket = new Ticket(ticketNumber++, selectedTasks.Select(t => t.Id).ToList());
+                tickets.Add(ticket);
+
+                // Добавляем задачи в список использованных
+                foreach (var task in selectedTasks)
+                    _usedTaskIds.Add(task.Id);
             }
 
             return tickets;
         }
 
         /// <summary>
-        /// Анализ типов заданий для выбора подходящих по средней сложности
+        /// Генерация всех возможных билетов и запись в файл
         /// </summary>
-        /// <param name="targetComplexity"> заданная сложность </param>
-        /// <param name="tolerance"> процентная погрешность сложности </param>
-        /// <returns> подходящие типы заданий, оценочное количество заданий в билете, минимальное число заданий, максимальное число заданий</returns>
-        private (List<string> SelectedTypes, int EstimatedTaskCount, int MinTasks, int MaxTasks)
-            AnalyzeTypes(int targetComplexity, int tolerance)
+        public void GenerateAllTickets()
         {
-            var typeStats = Tasks
-                .GroupBy(t => t.Type)
-                .ToDictionary(
-                    g => g.Key,
-                    g => (Count: g.Count(), AvgComplexity: g.Average(t => t.Complexity))
-                );
+            // Обновление выходного файла
+            _ticketWriter.Initialize();
 
-            double avgComplexityForAll = Tasks.Average(t => t.Complexity);
+            var filteredTasks = AnalyzeTypes();
+            var tickets = Generate(filteredTasks);
 
-            double lowerBound = avgComplexityForAll * (1 - tolerance / 100.0);
-            double upperBound = avgComplexityForAll * (1 + tolerance / 100.0);
+            // Запись билетов в файл
+            foreach (var ticket in tickets)
+                _ticketWriter.AppendTicket(ticket);
 
-            var suitableTypes = typeStats
-                .Where(kvp => kvp.Value.AvgComplexity >= lowerBound && kvp.Value.AvgComplexity <= upperBound)
-                .OrderByDescending(kvp => kvp.Value.Count)
-                .ToList();
-
-            if (!suitableTypes.Any())
-            {
-                Console.WriteLine("Предупреждение: не найдено типов в диапазоне сложности, будут использованы все типы.");
-                suitableTypes = typeStats.OrderByDescending(kvp => kvp.Value.Count).ToList();
-            }
-
-            int minTasks = Math.Max(2, (int)Math.Round(targetComplexity * (1 - tolerance / 100.0) / avgComplexityForAll));
-            int maxTasks = Math.Max(minTasks, (int)Math.Round(targetComplexity * (1 + tolerance / 100.0) / avgComplexityForAll));
-
-            int estimatedTaskCount = Enumerable.Range(minTasks, maxTasks - minTasks + 1)
-                .OrderBy(n => Math.Abs(targetComplexity - avgComplexityForAll * n))
-                .First();
-
-            var selectedTypes = suitableTypes.Select(kvp => kvp.Key).ToList();
-
-            return (selectedTypes, estimatedTaskCount, minTasks, maxTasks);
+            Console.WriteLine($"Сгенерировано {tickets.Count}");
         }
-
-        /// <summary>
-        /// Генерирует все комбинации типов заданий длиной <paramref name="length"/>.
-        /// Комбинации допускают повторение типов, порядок не имеет значения.
-        /// </summary>
-        /// <param name="types">Список доступных типов заданий.</param>
-        /// <param name="length">Длина каждой комбинации.</param>
-        /// <returns>Последовательность списков типов (каждый список — одна комбинация).</returns>
-        private static IEnumerable<List<string>> GetTypeCombinations(List<string> types, int length)
-        {
-            // Недостижимое условие (на всякий случай)
-            if (length <= 0) yield break;
-
-            var n = types.Count;
-
-            // индексы комбинации (неубывающая последовательность индексов)
-            var indices = new int[length];
-
-            while (true)
-            {
-                var combo = new List<string>();
-
-                for (int i = 0; i < length; i++)
-                    combo.Add(types[indices[i]]);
-
-                yield return combo;
-
-                // инкрементируем "комбинацию" как счётчик с ограничением неубывания
-                int pos = length - 1;
-                while (pos >= 0 && indices[pos] == n - 1) pos--;
-                if (pos < 0) yield break; // закончили — все индексы равны n-1
-
-                // увеличение текущкей позиции и сохранение неубывания
-                indices[pos]++;
-                for (int j = pos + 1; j < length; j++)
-                    indices[j] = indices[pos];
-            }
-        }
-
     }
 }
 
